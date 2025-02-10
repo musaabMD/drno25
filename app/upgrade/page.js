@@ -5,6 +5,18 @@ import { createClient } from '@/libs/supabase/client';
 import { Check } from 'lucide-react';
 import HomeHeader from "@/components/Quiz/HHeader";
 
+const PricingOption = ({ duration, price, days }) => (
+  <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer">
+    <div>
+      <div className="font-medium text-gray-900">{duration}</div>
+      <div className="text-sm text-gray-500">{days} days access</div>
+    </div>
+    <div className="text-right">
+      <div className="text-lg font-bold text-blue-600">${price}</div>
+    </div>
+  </div>
+);
+
 const PricingCard = ({ plan, currentSub }) => (
   <div className="relative bg-white rounded-2xl shadow-lg overflow-hidden transform hover:scale-105 transition-all duration-300">
     {currentSub && (
@@ -14,30 +26,35 @@ const PricingCard = ({ plan, currentSub }) => (
     )}
     <div className="p-8">
       <div className="text-4xl mb-4">{plan.emoji}</div>
-      <h3 className="text-2xl font-bold mb-2">{plan.exam.initials}</h3>
+      <h3 className="text-2xl font-bold mb-2">{plan.exam?.initials || plan.exam_id}</h3>
+      <p className="text-gray-500">{plan.exam?.name}</p>
       
       <div className="mt-6 space-y-4">
         <div className="space-y-2">
-          <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-            <span>Monthly</span>
-            <span className="font-bold">${plan.price_monthly}</span>
-          </div>
-          <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-            <span>Quarterly</span>
-            <span className="font-bold">${plan.price_quarterly}</span>
-          </div>
-          <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-            <span>Biannual</span>
-            <span className="font-bold">${plan.price_biannual}</span>
-          </div>
-          <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-            <span>Annual</span>
-            <span className="font-bold">${plan.price_annual}</span>
-          </div>
+          <PricingOption 
+            duration="1 Month" 
+            price={plan.price_monthly} 
+            days={30}
+          />
+          <PricingOption 
+            duration="3 Months" 
+            price={plan.price_quarterly} 
+            days={90}
+          />
+          <PricingOption 
+            duration="6 Months" 
+            price={plan.price_biannual} 
+            days={180}
+          />
+          <PricingOption 
+            duration="12 Months" 
+            price={plan.price_annual} 
+            days={365}
+          />
         </div>
 
         <ul className="space-y-3">
-          {plan.features.map((feature, idx) => (
+          {plan.features?.map((feature, idx) => (
             <li key={idx} className="flex items-center text-gray-600">
               <Check className="h-5 w-5 text-green-500 mr-2" />
               {feature}
@@ -74,13 +91,17 @@ export default function UpgradePage() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         
-        const { data: pricingData } = await supabase
+        const { data: pricingData, error } = await supabase
           .from('drnote_pricing')
           .select(`
             *,
-            exam:exams (name, initials)
+            exam:exams!inner (
+              name,
+              initials
+            )
           `);
 
+        if (error) throw error;
         if (pricingData) {
           setPlans(pricingData);
         }
